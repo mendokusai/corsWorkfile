@@ -1,0 +1,184 @@
+This section will handle preflight requests
+
+preflight requests are necessary if you want to interact with a server and make DELETE or PUT requests.
+
+Preflight is a pre-action check for authorization that allows further action.
+
+* Examine Preflight request
+* When to do it
+* Headers so the server can respond to preflight
+* Preflight Cache
+
+cors3a adds delete functions to client and server support.
+  request doesn't work, though in the network panel, there's an options request... this is why a preflight is necessary.
+
+What's actually happening in preflight:
+Mapping the actual request method:
+
+Preflight request                Actual request
+---------------------------------------------------------
+OPTIONS /data HTTP/1.1           DELETE /data HTTP/1.1
+User-Agent: Chrome               User-Agent: Chrome
+Host: localhost:10009            Host: localhost:10009
+Accept: */*                      Accept: */*
+Origin: http://localhost:10007   Origin: http://
+                                 localhost:10007
+Access-Control-Request-Method: 
+DELETE
+---------------------------------------------------------------
+
+cors3b.js
+
+Add Preflight handling
+
+var isPreflight = function(req) {
+  var isHttpOptions = req.method === 'OPTIONS';
+  var hasOriginHeader = req.headers['origin'];
+  var hasRequestMethod = req.headers['access-control-request-method'];
+  return isHttpOptions && hasOriginHeader && hasRequestMethod;
+};
+
+var handleCors = function(req, res, next) {
+  res.set('Access-Control-Allow-Origin', 'http://localhost:1111');
+  if (isPreflight(req)) {
+    console.log('Received a preflight request!');
+    res.status(204).end();
+  return;
+  }
+  next();
+};
+
+Using cors3a.html, delete links should activate "Received a preflight request!" in the server console.
+
+Next, add preflight response
+
+Access-Control-Allow-Methods: DELETE
+Access-Control-Allow-Methods: HEAD, GET, POST, PUT, DELETE
+
+update server to handle preflight request
+
+create cors3c.js
+add to handlerCors:
+
+var handleCors = function(req, res, next) {
+  res.set('Access-Control-Allow-Origin', 'http://localhost:1111');
+  if (isPreflight(req)) {
+    console.log('Received a preflight request!');
+    res.set('Access-Control-Allow-Methods', 'GET, DELETE');
+    res.status(204).end();
+    return;
+  }
+  next();
+};
+
+On the client you will the delete works now!
+In the network panel of dev tools you will see the preflight OPTION request, followed by the actual DELETE request. BOOYAH!
+
+creating cors3d.html
+Adding headers to the request - to add data/because you can.
+
+var getBlogPosts = function() {
+  var xhr = createXhr('GET', 'http://127.0.0.1:9999/api/posts');
+  xhr.setRequestHeader('Timezone-Offset',
+  new Date().getTimezoneOffset());
+  xhr.setRequestHeader('Sample-Source', 'CORS in Action');
+  xhr.onload = function() {
+  ...
+
+Console has error: "Request header filed Timezone-Offset is not allowed by Access-Control-Allow-Headers"
+
+in Network OPTIONS: Request Headers: Access-Control-Request-Headers:sample-source, timezone-offset
+
+Preflight request             Actual request
+--------------------------------------------------------
+OPTIONS /api/posts HTTP/1.1   GET /api/posts HTTP/1.1
+User-Agent: Chrome            User-Agent: Chrome
+Host: 127.0.0.1:9999          Host: 127.0.0.1:9999
+Accept: */*                   Accept: */*
+Origin: http://localhost:1111 Origin: http://localhost:1111
+Access-Control-Request-       
+Method: GET
+Access-Control-Request-       Timezone-Offset: 300
+Headers: Timezone-Offset,   
+sample-source                 Sample-Source: Taste the 
+                              Rockies
+-----------------------------------------------------------------
+
+Need to update server handling with...
+Access-Control-Allow-Headers: Timezone-Offset, Sample-Source
+  res.set('Access-Control-Allow-Headers', 'Timezone-Offset, Sample-Source');
+
+cors3d.js
+
+...
+var handleCors = function(req, res, next) {
+  res.set('Access-Control-Allow-Origin', 'http://127.0.0.1:1111');
+  if (isPreflight(req)) {
+    res.set('Access-Control-Allow-Methods', 'GET, DELETE');
+    res.set('Access-Control-Allow-Headers', 'Timezone-Offset, Sample-Source');
+    res.status(204).end();
+    return;
+  }
+  next();
+};
+...
+
+Rejecting requests! Woah, that guy's not allowed to delete posts, only this guy.
+
+Ways to reject a preflight request
+
+Response                              Reason
+-----------------------------------------------------------------------
+HTTP/1.1 200 OK                       No Access-Control-Allow-Origin 
+                                      header
+
+HTTP/1.1 200 OK                       No Access-Control-Allow-Methods 
+Access-Control-Allow-Origin: *        header
+
+HTTP/1.1 200 OK                       No Access-Control-Allow-Headers 
+Access-Control-Allow-Origin: *        header
+Access-Control-Allow-Methods: DELETE
+
+HTTP/1.1 200 OK                       Access-Control-Allow-Headers 
+Access-Control-Allow-Origin: *        doesn’t match
+Access-Control-Allow-Methods: DELETE
+Access-Control-Allow-Headers: Foo
+
+HTTP/1.1 200 OK                       Access-Control-Allow-Methods 
+Access-Control-Allow-Origin: *        doesn’t match
+Access-Control-Allow-Methods: GET
+Access-Control-Allow-Headers: Shady-
+Status
+------------------------------------------------------------------------
+
+Adding upload capability
+
+Create cors3e.html
+
+...
+
+Adding upload function:
+  function uploadFile(file) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/upload', true);
+    xhr.upload.onprogress = function(e) {
+      console.log('Upload progress: ' ((e.loaded / e.total) * 100));
+    };
+    xhr.send(file);
+  }
+...
+
+Adding Max-Age response header 
+(adds how long the preflight-connection should be cached)
+
+var handleCors = function(req, res, next) {
+  res.set('Access-Control-Allow-Origin', 'http://localhost:1111');
+  if (isPreflight(req)) {
+    res.set('Access-Control-Allow-Methods', 'GET, DELETE');
+    res.set('Access-Control-Allow-Headers', 'Timezone-Offset, Sample-Source');
+    res.set('Access-Control-Max-Age', '120');
+    res.status(204).end();
+    return;
+  }
+  next();
+};
