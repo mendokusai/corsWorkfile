@@ -1,0 +1,14 @@
+Full CORS support:    Chrome 3+,
+                      Firefox 3.5+,
+                      Safari 4+,
+                      Internet Explorer 10+,
+                      Opera 12+
+
+Partial CORS support: Internet Explorer 8,
+                      Internet Explorer 9
+No CORS support:      Chrome 2 and below,
+                      Firefox 3 and below,
+                      Safari 3 and below,
+                      Internet Explorer 7 and below
+
+**(make a pact with me never to support IE)**

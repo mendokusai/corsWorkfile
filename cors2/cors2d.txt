@@ -1,0 +1,14 @@
+Now it works with anything!
+
+Maybe that's not so good? Let's set it to one address:
+
+Access-Control-Allow-Origin: http://localhost:1111
+
+var handleCors = function(req, res, next) {
+  res.set('Access-Control-Allow-Origin', 'http://localhost:1111');
+  next();
+};
+
+Let's make two clients one at port :1111, and another at :2222
+
+will :2222 work? HELL NO!

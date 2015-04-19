@@ -1,0 +1,20 @@
+<canvas id="myCanvas"></canvas>
+<script>
+  var myCanvas = document.getElementById("myCanvas");
+  var myContext = myCanvas.getContext('2d');
+  var img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+  myCanvas.width = img.width;
+  myCanvas.height = img.height;
+  myContext.drawImage(img, 0, 0);
+  console.log(myCanvas.toDataURL("image/png"));
+  };
+  img.src = 'http://www.html5rocks.com/static/images/mastheads/h5r-shadow.png';
+</script>
+
+setting attribute: img.crossOrigin = 'anonymous';
+calling toDataURL works even when image is on different origin: console.log(myCanvas.toDataURL("image/png"));
+  };
+
+Error message when trying to extract data from 'tainted canvas': Caught SecurityError: Failed to execute 'toDataURL' on 'HTMLCanvasElement': Tainted Canvases may not be exported.

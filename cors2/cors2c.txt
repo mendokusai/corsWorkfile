@@ -1,0 +1,17 @@
+To get CORs requests to work we need to add an `Access-Control-Allow-Origin` header
+
+Both of these work:
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Origin: http://localhost:1111
+
+Let's add it to the server!
+
+Add handleCors:
+  var handleCors = function(req, res, next) {
+    res.set('Access-Control-Allow-Origin', '*');
+    next();
+  };
+
+Call that 'ish, playa!':
+  serverapp.use(handleCors); 
+

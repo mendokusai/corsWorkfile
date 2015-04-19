@@ -1,0 +1,1 @@
+This section focuses on CORS requests from the Client-side covering requests with modern browsers, old browsers (that can do CORS) and other aspects of cors.

@@ -1,0 +1,20 @@
+Writing the Server API app. Note the comments
+
+var express = require('express');
+var POSTS = { //the posts
+  '1': {'post': 'This is the first blog post.'},
+  '2': {'post': 'This is the second blog post.'},
+  '3': {'post': 'This is the third blog post.'},
+  '4': {'post': 'This is the fourth post.'}
+};
+var SERVER_PORT = 9999;
+var serverapp = express(); //creates the web server
+serverapp.use(express.static(__dirname));
+serverapp.get('/api/posts', function(req, res) {
+res.json(POSTS);
+}); // creates the API endpoint
+serverapp.listen(SERVER_PORT, function() {
+console.log('Started server at http://127.0.0.1:' + SERVER_PORT);
+});
+
+//goto: http://localhost:9999/api/posts

@@ -1,0 +1,25 @@
+<!-- Here's a canvas: -->
+<canvas id="myCanvas"></canvas>
+<script>
+  var myCanvas = document.getElementById('myCanvas');
+  var myContext = myCanvas.getContext('2d');
+  myContext.fillStyle = '#888';
+  myContext.fillRect(0,0,240,150);
+</script>
+
+<!-- Setting an image's crossOrigin attribute -->
+<canvas id="myCanvas"></canvas>
+<script>
+  var myCanvas = document.getElementById("myCanvas");
+  var myContext = myCanvas.getContext('2d');
+  var img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+  myCanvas.width = img.width;
+  myCanvas.height = img.height;
+  myContext.drawImage(img, 0, 0);
+  console.log(myCanvas.toDataURL("image/png"));
+  };
+  img.src = 'http://www.html5rocks.com/static/images/mastheads/h5r-shadow.png';
+</script>
+

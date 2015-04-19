@@ -1,0 +1,73 @@
+Error handling
+
+100 - 199 Information
+200 - 299 Success
+300 - 399 Redirect
+400 - 499 Client Error
+500 - 599 Server Error
+
+<!DOCTYPE html>
+<html>
+  <body onload="loadPhotos();">
+    <div id="photos">Loading photos...</div>
+    <script>
+      function loadPhotos() {
+        var api_key = '<YOUR API KEY HERE>';
+        var method = 'GET';
+        var url = 'https://api.flickr.com/services/rest/?' +
+                  'method=flickr.people.getPublicPhotos&' +
+                  'user_id=32951986%40N05&' +
+                  'extras=url_q&format=json&nojsoncallback=1&' +
+                  'api_key=' + api_key;
+        var xhr = new XMLHttpRequest();
+        if (!('withCredentials' in xhr)) {
+          alert('Browser does not support CORS.');
+          return;
+        }
+        xhr.open(method, url);
+        xhr.onerror = function() {
+          alert('There was an error.');
+        };
+        xhr.onload = function() {
+          var data = JSON.parse(xhr.responseText);
+          if (data.stat == 'ok') {
+            var photosDiv = document.getElementById('photos');
+            photosDiv.innerHTML = '';
+            var photos = data.photos.photo;
+            for (var i = 0; i < photos.length; i++) {
+              var img = document.createElement('img');
+              img.src = photos[i].url_q;
+              photosDiv.appendChild(img);
+            }
+          } else {
+            alert(data.message);
+          }
+        };
+        xhr.send();
+      }
+    </script>
+  </body>
+</html>
+
+Assigns a method 'onerror' event handler:   
+      xhr.onerror = function() {
+        alert('There was an error.');
+      };
+
+
+Other event handlers
+
+Event handler       Function
+-----------------------------------------------------------
+onloadstart         Fires when the request is successfully initiated 
+                    asynchronously.
+onloadend           Similar to onloadstart, onloadend always fires when the request
+                    ends. This event handler is useful if you want to execute some piece of code at the very end of the request, regardless of whether or not the request is successful.
+onabort             Fires if the client aborts the request by calling the abort 
+                    method. If onabort fires, the onload and onerror event handlers will not fire.
+ontimeout           Fires if the code set a timeout value, and that timeout has 
+                    been exceeded. If your code sets a timeout of 10,000 milliseconds (10 seconds), this event handler will fire if the response hasn’t been received after 10 seconds. If ontimeout fires, the onload and onerror event handlers will not fire.
+onprogress          Monitors progress of a request or response. It’s most helpful 
+                    in the context of uploading or downloading binary data, such as an image. If you’re uploading an image to a website, onprogress can be used to create a progress indicator showing how much of the image has been uploaded.
+onreadystatechange  Fires when the request changes states. The XMLHttpRequest spec
+                    defines five states a request can be in: unset, opened, headers received, loading, and done. The value of the ready state is stored in the XMLHttpRequest object’s readyState property. For example, when a request goes from loading to done, its readyState changes from 3 to 4 (the numeric values for loading and done, respectively), and         onreadystatechange fires.

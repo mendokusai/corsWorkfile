@@ -1,0 +1,57 @@
+Normally that would require two sets of code. The next version includes handling for bastard browsers:
+
+function createCORSRequest(method, url){
+  var xhr = new XMLHttpRequest();
+  if ("withCredentials" in xhr){
+    xhr.open(method, url, true);
+  } else if (typeof XDomainRequest != "undefined"){
+    xhr = new XDomainRequest();
+    xhr.open(method, url);
+  } else {
+    xhr = null;
+  }
+  return xhr;
+}
+
+
+If browser supports CORS, return xmlhttprequest object:
+  if ("withCredentials" in xhr){
+    xhr.open(method, url, true);
+  }
+
+If browser has XDomainRequest object, use that
+  xhr = new XDomainRequest();
+  xhr.open(method, url);
+
+Otherwise CORS request is null:
+  xhr = null;
+
+Differences between formats
+
+Supported feature     XMLHttpRequest    XDomainRequest
+-------------------------------------------------------
+HTTP methods          All               GET
+                                        POST
+HTTP schemes          All               HTTP
+                                        HTTPS
+Request content type  All               text/plain
+Synchronous requests  Yes               No
+Custom request headers Yes              No
+User credentials      Yes               No
+(such as cookies) 
+Event handlers        onloadstart
+                      onloadend         onerror
+                      onerror           ontimeout
+                      onabort           onprogress
+                      ontimeout
+                      onprogress
+                      onreadystatechange
+                      onloadend
+Response properties   status            responseText
+                      statusText        contentType
+                      responseType
+                      response
+                      responseText
+                      responseXML
+                      getResponseHeader
+                      getAllResponseHeaders

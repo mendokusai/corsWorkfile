@@ -1,0 +1,30 @@
+This section focuses on CORs from the server-side.
+
+What do we need:
+  * An API endpoint that returns blog posts in JSON format
+  * An HTML page that queries the API for the posts and displays them on page
+
+What we'll use for that
+  Node.js
+  Express
+  Chrome Browser
+
+JSON API
+/api/posts
+{
+  "1": {"post": "Post 1!"},
+  "2": {"post": "Post 2!"},
+  "3": {"post": "Post 3!"},
+  "4": {"post": "Post 4, we did it!"}
+}
+
+/client.html
+boilerplate html.
+
+API server: cors2a.js
+sameOrigin client: cors2a.html
+
+two servers(one file): cors2b.js 
+port:9999
+port:1111
+
