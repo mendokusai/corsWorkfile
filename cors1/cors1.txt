@@ -1,1 +1,5 @@
 This section focuses on CORS requests from the Client-side covering requests with modern browsers, old browsers (that can do CORS) and other aspects of cors.
+
+[Here's what Mozilla has to say on the subject](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS)
+
+[W3.org](http://www.w3.org/TR/cors/)

@@ -1,0 +1,118 @@
+Cors with Cookies!
+
+Uses user credentials, username & password 
+
+**Careful, this isn't secure!**
+
+start up server, visit localhost:9999/cors4a_login.html
+
+cors4b.js adds cookie-parser
+
+serverapp.use(cookieParser());
+
+cookieParser creates this:   
+  cookies: { username: 'owner' },
+versus a wall of a string in the DOM.
+
+if (req.cookies['username'] === 'owner') {
+  delete POSTS[req.params.id];
+  res.status(204).end();
+} else {
+  res.status(403).end();
+}
+
+Necessary piece to allow cookie data:
+res.set('Access-Control-Allow-Credentials', 'true');
+  however, client also needs to have handling for cookies:
+
+  xhr.withCredentials = true; added to delete function
+
+withCredentials ACAC    Status    Caveats
+------------------------------------------------------------
+false           false   Allowed   Cookies aren’t included in the request
+true            true    Allowed   Cookies are included in the request
+false           true    Allowed   Cookies aren’t included in the request
+true            false   Rejected  Invalid because cookies are sent on the
+                                  request, but the server doesn’t allow them.
+--------------------------------------------------------------------
+
+
+Client code and server HTTP response when withCredentials and Access-Control-Allow-Credentials aren’t set
+
+Client code                         Server HTTP response
+-----------------------------------------------------------------
+var xhr = new XMLHttpRequest();     HTTP/1.1 200 OK
+xhr.open('GET',                     Access-Control-Allow-Origin:
+'http://127.0.0.1:9999/api/posts'); http://localhost:1111
+xhr.send();
+-----------------------------------------------------------------
+
+
+Client code and server HTTP response when withCredentials and Access-Control-Allow-Credentials are both true
+
+Client code                         Server HTTP response
+-----------------------------------------------------------------
+var xhr = new XMLHttpRequest();     HTTP/1.1 200 OK
+xhr.open('GET',                     Access-Control-Allow-Origin:
+'http://127.0.0.1:9999/api/posts'); http://localhost:1111
+xhr.withCredentials = true;         Access-Control-Allow-Credentials:
+xhr.send();                         true
+-----------------------------------------------------------------
+
+
+Client code and server HTTP response when withCredentials isn’t set but Access-Control-Allow-Credentials is true
+
+Client code                         Server HTTP response
+-----------------------------------------------------------------
+var xhr = new XMLHttpRequest();     HTTP/1.1 200 OK
+xhr.open('GET',                     Access-Control-Allow-Origin:
+'http://127.0.0.1:9999/api/         http://localhost:1111
+posts');                            Access-Control-Allow-Credentials:
+xhr.send();                         true
+-----------------------------------------------------------------
+
+Client code and server HTTP response when withCredentials is true but Access-Control-Allow-Credentials isn’t set
+
+Client code                         Server HTTP response
+-----------------------------------------------------------------
+var xhr = new XMLHttpRequest();     HTTP/1.1 200 OK
+xhr.open('GET',                     Access-Control-Allow-Origin:
+'http://127.0.0.1:9999/api/posts'); http://localhost:1111
+xhr.withCredentials = true;
+xhr.send();
+
+Caveats: 
+* cookies are same-origin so server cookie data cannot be accessed
+* Method doesn't work without preflight p104-05
+* Cookie can also be set from the server, as long as the credentials passed are true at the initial request.
+
+
+Reading a response header using X-Powered-By p137
+
+Creating cors4c.html
+
+xhr.onload = function() {
+  var data = JSON.parse(xhr.responseText);
+  var elem = document.getElementById('output');
+  var xPoweredBy = xhr.getResponseHeader('X-Powered-By');
+  if (xPoweredBy) {
+    var xpbDiv = document.createElement('div');
+    xpbDiv.className = 'post';
+    xpbDiv.innerHTML = 'X-Powered-By: ' + xPoweredBy;
+    elem.appendChild(xpbDiv);
+  }
+for (var postId in data) {
+
+
+Still need to add to the server to make header readable.
+
+var handleCors = function(req, res, next) {
+  res.set('Access-Control-Allow-Origin', 'http://localhost:1111');
+  res.set('Access-Control-Allow-Credentials', 'true');
+  if (isPreflight(req)) {
+    . . .
+  } else {
+    res.set('Access-Control-Expose-Headers', 'X-Powered-By');
+  }
+
+[more header goodness from Mozilla](http://www.w3.org/TR/cors/#access-control-expose-headers-response-header)
