@@ -1,0 +1,182 @@
+refactor handleCors code to allow configuration options:
+
+var corsOptions = {};
+var handleCors = function(options) {
+return function(req, res, next) {
+res.set('Access-Control-Allow-Origin', 'http://localhost:1111');
+res.set('Access-Control-Allow-Credentials', 'true');
+if (isPreflight(req)) {
+res.set('Access-Control-Allow-Methods', 'GET', 'DELETE');
+res.set('Access-Control-Allow-Headers',
+'Timezone-Offset, Sample-Source');
+res.set('Access-Control-Max-Age', '120');
+res.status(204).end();
+return;
+} else {
+res.set('Access-Control-Expose-Headers', 'X-Powered-By');
+}
+next();
+}
+};
+var SERVER_PORT = 9999;
+var serverapp = express();
+serverapp.use(cookieParser());
+serverapp.use(express.static (__dirname));
+serverapp.use(handleCors(corsOptions));
+serverapp.get('/api/posts', function(req, res) {
+res.json(POSTS);
+});
+
+
+■ Why are you adding support for cross-origin requests?
+■ Are you adding CORS support to a new service or an existing server?
+■ Which clients should have access to the site?
+■ What devices/browsers will they be accessing the site from?
+■ Which HTTP methods and headers will your server support?
+■ Should the API support user-specific data? If so, will cookies be used to authenticate
+the user?
+
+Set Access-Control-Allow-Origin header
+4 options:
+  <no header>    no CORS support
+  *              CORS support for all origins
+  null           CORS support for unknown origins (from file)
+  <origin value> CORS is supported from specific origin
+
+  * has can create security hole, main-in-the-middle attack (p145)
+
+Access-Control-Allow-Origin: http://localhost:1111
+(only works for single address)
+
+Use a whitelist
+
+var createWhitelistValidator = function(whitelist) {
+  return function(val) {
+    for (var i = 0; i < whitelist.length; i++) {
+      if (val === whitelist[i]) {
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+using the whitelist validator
+
+var originWhitelist = [
+  'http://localhost:1111'
+];
+
+var corsOptions = {
+  allowOrigin: createWhitelistValidator(originWhitelist)
+};
+
+var handleCors = function(options) {
+  return function(req, res, next) {
+    if (options.allowOrigin) {
+      var origin = req.headers['origin'];
+      if (options.allowOrigin(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+      }
+    } else {
+      res.set('Access-Control-Allow-Origin', '*');
+    }
+    …
+};
+
+other ways to validate the origin
+
+regex!
+
+var createRegexpValidator = function(re) {
+  return function(origin) {
+    return re.test(origin);
+  }
+};
+
+var corsOptions = {
+  allowOrigin: createRegexpValidator(/^http:\/\/localhost(:\d+)?$/i)
+};
+
+regex can match all port options, making it quicker if you have to allow many differences with similarities.
+
+validation technique options:
+whitelist -- tedious as it grows
+regexp -- need to verify not accidentally matching invalid origin
+database query -- can be slow
+blacklist -can be bypassed (with working origin)
+
+Vary Origin header
+tells proxy server that origin header should be taken into account when sending cached content.
+
+  if (options.allowOrigin) {
+    var origin = req.headers['origin'];
+    if (options.allowOrigin(origin)) {
+      res.set('Access-Control-Allow-Origin', origin);
+    }
+    res.set('Vary', 'Origin');
+  } else {
+    res.set('Access-Control-Allow-Origin', '*');
+  }
+};
+
+Null origin
+most useful if you want to test  uploading files - to a live server is tedious
+* allows null.
+
+you can add 'null' to whitelist
+
+or: 
+Access-Control-Allow-Origin: null
+
+same-origin request is useful for debugging the server
+
+var isSameOrigin = function(req) {
+  var host = req.protocol + '://' + req.headers['host'];
+  var origin = req.headers['origin'];
+  return host === origin || !origin;
+};
+
+it's probably more useful to separate traffic from same/cross-origin
+
+Security - CORS should not be used as a lock.
+
+curl -H "Origin: somerandomsite.com" http://127.0.0.1:9999/api/posts
+
+totally breaks in
+
+allow cookies on requests helps.
+■ You want to authorize users within your own ecosystem of clients and servers.
+■ You know exactly which clients will be accessing your server.
+
+
+using a CSRF token using OAuth
+[node oauth](https://github.com/ciaranj/node-oauth)
+
+Making a CORS request with an OAuth2 token:
+
+Preflight request                       Preflight response
+------------------------------------------------------------
+OPTIONS /api/posts HTTP/1.1             HTTP/1.1 204 No Content
+Host: 127.0.0.1:9999                    Access-Control-Allow-Origin: 
+Origin: http://localhost:1111           http://localhost:1111
+Access-Control-Request-Method: GET      Access-Control-Allow-Methods: 
+Access-Control-Request-Headers:         GET,POST, PUT, DELETE
+Authorization                           Access-Control-Allow-Headers:
+                                        Authorization
+
+Actual request                          Actual response
+------------------------------------------------------------ 
+GET /api/posts HTTP/1.1                 HTTP/1.1 200 OK
+Host: 127.0.0.1:9999                    Date: Sat, 05 Apr 2014 20:28:05 
+Origin: http://localhost:1111           GMT
+Authorization: Bearer <OAUTH2           Content-type: application/json;
+TOKEN>                                  charset=UTF-8
+                                        Content-length: 123
+                                        {
+                                        "data": "..."
+                                        }
+------------------------------------------------------------ 
+
+Handling preflight requests - especially an issue with mobile.
+whitelist request methods and headers (allowMethods, allowHeaders)
