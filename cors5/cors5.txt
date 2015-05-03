@@ -149,6 +149,69 @@ allow cookies on requests helps.
 ■ You want to authorize users within your own ecosystem of clients and servers.
 ■ You know exactly which clients will be accessing your server.
 
+Enable cookies on request
+
+  var corsOptions = {
+    allowOrigin: CreateWhitelistValidator(originWhitelist),
+    allowCredentials: true //sets credentials
+  };
+  var handleCors = function(options) {
+    return function(req, res, next) {
+      …
+      if (options.allowCredentials) {
+      res.set('Access-Control-Allow-Credentials', 'true'); //allows ACAC header
+    }
+    …
+  };
+
+Only whitelisted origins can make requests
+
+  var originWhitelist = [
+    'null',
+    'http://localhost:1111'
+  ];
+  var corsOptions = {
+    allowOrigin: createWhitelistValidator(originWhitelist),
+    allowCredentials: true
+  };
+  var handleCors = function(options) {
+    return function(req, res, next) {
+      if (options.allowOrigin) {
+        var origin = req.headers['origin'];
+        if (options.allowOrigin(origin)) {
+          res.set('Access-Control-Allow-Origin', origin);
+        }
+        res.set('Vary', 'Origin');
+      } else {
+        res.set('Access-Control-Allow-Origin', '*');
+      }
+
+^^ Request still happens, now add short-circuit to block request vv
+
+  var originWhitelist = [
+    'null',
+    'http://localhost:1111'
+  ];
+  var corsOptions = {
+    allowOrigin: createWhitelistValidator(originWhitelist),
+    allowCredentials: true,
+    shortCircuit: true
+  };
+  var handleCors = function(options) {
+    return function(req, res, next) {
+    if (options.allowOrigin) {
+      var origin = req.headers['origin'];
+      if (options.allowOrigin(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+      } else if (options.shortCircuit) {
+        res.status(403).end(); //if origin is invalid, stop processing
+        return;
+      }
+      res.set('Vary', 'Origin');
+    } else {
+      res.set('Access-Control-Allow-Origin', '*');
+    }
+
 
 using a CSRF token using OAuth
 [node oauth](https://github.com/ciaranj/node-oauth)
@@ -178,5 +241,154 @@ TOKEN>                                  charset=UTF-8
                                         }
 ------------------------------------------------------------ 
 
-Handling preflight requests - especially an issue with mobile.
-whitelist request methods and headers (allowMethods, allowHeaders)
+Handling preflight requests - can be issue especially an issue with mobile.
+whitelist request methods and headers 
+  (allowMethods, allowHeaders)
+
+var corsOptions = {
+  allowOrigin: createWhitelistValidator(originWhitelist),
+  allowCredentials: true,
+  shortCircuit: true,
+  allowMethods: ['GET', 'DELETE'],
+  allowHeaders: ['Timezone-Offset', 'Sample-Source']
+};
+var handleCors = function(options) {
+  return function(req, res, next) {
+    ...
+    if (isPreflight(req)) {
+      if (options.allowMethods) {
+        res.set('Access-Control-Allow-Methods',
+        options.allowMethods.join(','));
+      }
+      if (options.allowHeaders) {
+        res.set('Access-Control-Allow-Headers',
+        options.allowHeaders.join(','));
+      }
+
+code refactors methods & headers
+
+all types of http methods:
+
+  var corsOptions = {
+    allowMethods: ['HEAD', 'OPTIONS', 'GET', 'POST', 
+                    'PUT', 'PATCH', 'DELETE']
+  }
+
+*Safest option:* Figure out what you need to cover and only use those.
+
+Common HTTP request headers
+
+Request header  Description
+------------------------------------------------
+Authorization     The credentials for making an authenticated
+                  request. If the server uses OAuth2 to authorize users, the token would be set in this header.
+Content-Type      The MIME type of the request body. The MIME
+                  type indicates the data type of the body. If the body were JSON, the MIME type would be application/json.
+If-Match          The ETag value of the corresponding resource.
+                  Used during updates to ensure that the update doesn’t conflict with a different update. Also used for requests with the Range header to make sure the new part matched the previously downloaded parts.
+If-Modified-Since Similar to the If-None-Match header, but
+                  with a date instead of ETag. The server only returns a response body if the resource has been modified since the date in this header. Otherwise, the server returns an HTTP 304 Not Modified status.
+If-None-Match     The ETag value of the corresponding 
+                  resource. Used when retrieving a resource. If the resource’s ETag matches the request ETag, the resource hasn’t changed since the previous retrieval, and the server returns an HTTP 304 Not Modified status (without a response body).
+If-Unmodifed-Since Similar to If-Match. Used during updates to 
+                  ensure that the update doesn’t conflict with a different update and to check if a Range request makes sense. Uses date instead of ETag.
+Range             Specifies a range of bytes to download from 
+                  the server (rather than the entire response). Used during resumable downloads to specify where to start the downloading.
+X-Requested-With  Indicates where an AJAX request originates. 
+                  Set by many JavaScript clients (although JQuery disables this header when making CORS requests).
+------------------------------------------------
+
+Allowing all request headers:
+
+var corsOptions = {
+  allowHeaders: function(req) {
+    return req.headers['access-control-request-headers'];
+  }
+};
+var handleCors = function(options) {
+  return function(req, res, next) {
+    ...
+    if (isPreflight(req)) {
+      ...
+      if (typeof(options.allowHeaders) === 'function') {
+        var headers = options.allowHeaders(req);
+        if (headers) {
+          res.set('Access-Control-Allow-Headers', headers);
+        }
+      } else if (options.allowHeaders) {
+        res.set('Access-Control-Allow-Headers',
+        options.allowHeaders.join(','));
+      }
+    
+
+Only headers with X-prefix
+
+  allowHeaders: function(req) {
+    var reqHeaders = req.headers['access-control-request-headers'];
+    if (!reqHeaders) {
+      return null;
+    }
+    reqHeaders = reqHeaders.split(',');
+    resHeaders = [];
+    for (var i = 0; i < reqHeaders.length; i++) {
+      var header = reqHeaders[i].trim();
+      if (header.toLowerCase().indexOf('x-') === 0) {
+        resHeaders.push(header);
+      }
+    }
+    return resHeaders.join(',');
+  }
+
+Setting MaxAge Header
+
+  var corsOptions = {
+    allowOrigin: createWhitelistValidator(originWhitelist),
+    allowCredentials: true,
+    shortCircuit: true,
+    allowMethods: ['GET', 'DELETE'],
+    allowHeaders: ['Timezone-Offset', 'Sample-Source'],
+    maxAge: 120
+  };
+  var handleCors = function(options) {
+    return function(req, res, next) {
+    ...
+    if (isPreflight(req)) {
+      ...
+      if (options.maxAge) {
+        res.set('Access-Control-Max-Age', options.maxAge);
+      }
+      ...
+    };
+
+
+Exposing Response Headers to the Client
+
+var corsOptions = {
+  allowOrigin: createWhitelistValidator(originWhitelist),
+  allowCredentials: true,
+  shortCircuit: true,
+  allowMethods: ['GET', 'DELETE'],
+  allowHeaders: ['Timezone-Offset', 'Sample-Source'],
+  maxAge: 120,
+  exposeHeaders: ['X-Powered-By']
+};
+var handleCors = function(options) {
+  return function(req, res, next) {
+    ...
+    if (isPreflight(req)) {
+      ...
+      res.status(204).end();
+      return;
+    } else if (options.exposeHeaders) {
+      res.set('Access-Control-Expose-Headers',
+      options.exposeHeaders.join(','));
+    }
+
+Redirects
+
+serverapp.get('/api/posts', function(req, res) {
+  res.redirect(301, '/api/v2/posts');
+});
+serverapp.get('/api/v2/posts', function(req, res) {
+  res.json(POSTS);
+});
